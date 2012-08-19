@@ -26,7 +26,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-//#include <sys/ioctl.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -66,10 +65,10 @@ static int serial_init(const char *serial_port)
 static int serial_read(void *buf, size_t nbytes)
 {
     fd_set readfds;
-    int actual;
     FD_ZERO(&readfds);
     FD_SET(serial_fd, &readfds);
-    actual = select(serial_fd+1, &readfds, NULL, NULL, NULL);
+    struct timeval timeout = {0, 1000000};
+    int actual = select(serial_fd+1, &readfds, NULL, NULL, &timeout);
     if(actual > 0)
     {
         actual = read(serial_fd, buf, nbytes);
