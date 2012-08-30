@@ -100,14 +100,40 @@ static void gsmtap_open(const char *gsmtap_host)
 void testgsmtap(unsigned char *AppMsg, unsigned short AppMsgLength)
 {
     int length = 0;
-    if ((AppMsg[0] == 0x03) && ((AppMsg[1] == 0x03) || (AppMsg[1] == 0x00))) //L2/L3
+    if ((AppMsg[0] == 0x03) && (AppMsg[1] != 0x04)) //trace messages except for GPRS RLC/MAC header ones
     {
         int format = (AppMsg[2] >> 1 & 0b1111);
         length = AppMsg[3] << 8 | AppMsg[4];
-        int i = 0;
+        /*int i = 0;
         printf("* L%d format:%d, Length:%d, FreqBit:%d, U/D: %d, LayerMessageFrame: [", (AppMsg[1] == 0x00) ? 3 : 2, format, length, AppMsg[2] >> 5, (AppMsg[2] & 1));
         for (i=0; i<length; i++) printf("%d, ", AppMsg[5+i]);
-        printf("\b\b]\n");
+        printf("\b\b]\n");*/
+        const size_t buf_len = sizeof(struct gsmtap_hdr) + length;
+        unsigned char buf[buf_len];
+        struct gsmtap_hdr *gh = (struct gsmtap_hdr *) buf;    
+        memset(gh, 0, sizeof(*gh));
+        gh->version = GSMTAP_VERSION;
+        gh->hdr_len = sizeof(*gh)/4;
+        if ((format == 0)||(format == 2)) gh->type = GSMTAP_TYPE_UM_BURST;
+        else gh->type = GSMTAP_TYPE_UM;
+        gh->sub_type = GSMTAP_CHANNEL_UNKNOWN;
+        switch (format){
+            case 0: gh->sub_type = GSMTAP_BURST_NORMAL; break;
+            case 1: gh->sub_type = GSMTAP_CHANNEL_RACH; break;
+            case 2: gh->sub_type = GSMTAP_BURST_ACCESS; break;
+            case 3: gh->sub_type = GSMTAP_CHANNEL_BCCH; break;
+            case 4: gh->sub_type = GSMTAP_CHANNEL_PCH; break;
+            case 5: gh->sub_type = GSMTAP_CHANNEL_SDCCH; /*CBCH*/ break;
+            case 7: gh->sub_type = GSMTAP_CHANNEL_SDCCH; break;
+            case 8: gh->sub_type = GSMTAP_CHANNEL_ACCH | GSMTAP_CHANNEL_SDCCH; break;
+            case 9: gh->sub_type = GSMTAP_CHANNEL_TCH_F; break;
+            case 10: gh->sub_type = GSMTAP_CHANNEL_TCH_H; break;
+            case 11: gh->sub_type = GSMTAP_CHANNEL_CCCH; break;
+            case 12: gh->sub_type = GSMTAP_CHANNEL_AGCH; break;
+            default: gh->sub_type = GSMTAP_CHANNEL_UNKNOWN;
+        }
+        memcpy(buf + sizeof(*gh), AppMsg+5, length);
+        if (write(gsmtap_fd, buf, buf_len) < 0) perror("write gsmtap");
     }
 }
 
