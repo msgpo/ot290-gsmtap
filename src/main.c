@@ -100,7 +100,7 @@ static void gsmtap_open(const char *gsmtap_host)
 void testgsmtap(unsigned char *AppMsg, unsigned short AppMsgLength)
 {
     int length = 0;
-    if ((AppMsg[0] == 0x03) && (AppMsg[1] != 0x04)) //trace messages except for GPRS RLC/MAC header ones
+    if ((AppMsg[0] == 0x03) && (AppMsg[1] < 0x04)) //trace messages except for GPRS RLC/MAC header and RATSCCH trace ones
     {
         int format = (AppMsg[2] >> 1 & 0b1111);
         length = AppMsg[3] << 8 | AppMsg[4];
@@ -114,7 +114,7 @@ void testgsmtap(unsigned char *AppMsg, unsigned short AppMsgLength)
         memset(gh, 0, sizeof(*gh));
         gh->version = GSMTAP_VERSION;
         gh->hdr_len = sizeof(*gh)/4;
-        if ((format == 0)||(format == 2)) gh->type = GSMTAP_TYPE_UM_BURST;
+        if ((format == 0) || (format == 2)) gh->type = GSMTAP_TYPE_UM_BURST;
         else gh->type = GSMTAP_TYPE_UM;
         gh->sub_type = GSMTAP_CHANNEL_UNKNOWN;
         switch (format){
@@ -132,7 +132,7 @@ void testgsmtap(unsigned char *AppMsg, unsigned short AppMsgLength)
             case 12: gh->sub_type = GSMTAP_CHANNEL_AGCH; break;
             default: gh->sub_type = GSMTAP_CHANNEL_UNKNOWN;
         }
-        memcpy(buf + sizeof(*gh), AppMsg+5, length);
+        memcpy(buf+sizeof(*gh), AppMsg+5, length);
         if (write(gsmtap_fd, buf, buf_len) < 0) perror("write gsmtap");
     }
 }
@@ -170,10 +170,8 @@ int main(int argc, char **argv)
     printf("Press Ctrl+C to interrupt...\n");
     signal(SIGINT, interrupt);
     
-    unsigned char myreq[] = {2, 0, 0, 2, 65, 0, 67, 3}; //MobileInformationMessage-ProductName request 
+    unsigned char myreq[] = {2, 0, 0, 6, 0, 31, 0, 0, 0, 63, 38, 3}; //LayerMessage-enable request
     req(myreq, sizeof(myreq));
-    unsigned char myreq2[] = {2, 0, 0, 6, 0, 31, 0, 0, 0, 9, 16, 3}; //LayerMessage-EnableL2L3Trace request
-    req(myreq2, sizeof(myreq2));
     
     while (run)
     {
@@ -210,12 +208,11 @@ int main(int argc, char **argv)
             printf(" ~ AppMsg: [");
             for (i = 0; i < f.AppMsgLength; i++) printf("%d ", f.AppMsg[i]);
             printf("\b]\n");
-            /*printf("\b, asString: [");
-            for (i = 0; i < f.AppMsgLength; i++) printf("%c ", (char)f.AppMsg[i]);
-            printf("\b]\n");*/
             testgsmtap(f.AppMsg, f.AppMsgLength);
         }
     }
+    myreq[9] = 0; myreq[10] = 25; //LayerMessage-disable request
+    req(myreq, sizeof(myreq));
     printf("[*] Checksum errors: %d/%d | Total errors: %d/%d\n", s.checksumErrors, s.packets, s.totalErrors, s.packets);
     return 0;
 }
