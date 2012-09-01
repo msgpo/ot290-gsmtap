@@ -1,6 +1,6 @@
 * ot290-gsmtap
 
-This is a command line utility which reads the trace frames sent by the Sagem OT-290 trough the serial line and forwards the GSM L2/L3 and GPRS RLC/MAC messages to a host as GSMTAP packets so that you can use Wireshark to analyze them.
+This is a command line utility which reads the trace frames sent by the Sagem OT-290 trough the serial line and forwards the GSM/GPRS ones to the specified host as GSMTAP packets so that you can use Wireshark to analyze them.
 
 In order for this tool to run, you have to set on the phone the Trace or Data/Trace mode (Main Menu -> Test Tool -> Info & Settings -> Serial links setup).
 

@@ -104,16 +104,13 @@ void testgsmtap(unsigned char *AppMsg, unsigned short AppMsgLength)
     {
         int format = (AppMsg[2] >> 1 & 0b1111);
         length = AppMsg[3] << 8 | AppMsg[4];
-        /*int i = 0;
-        printf("* L%d format:%d, Length:%d, FreqBit:%d, U/D: %d, LayerMessageFrame: [", (AppMsg[1] == 0x00) ? 3 : 2, format, length, AppMsg[2] >> 5, (AppMsg[2] & 1));
-        for (i=0; i<length; i++) printf("%d, ", AppMsg[5+i]);
-        printf("\b\b]\n");*/
         const size_t buf_len = sizeof(struct gsmtap_hdr) + length;
         unsigned char buf[buf_len];
         struct gsmtap_hdr *gh = (struct gsmtap_hdr *) buf;    
         memset(gh, 0, sizeof(*gh));
         gh->version = GSMTAP_VERSION;
         gh->hdr_len = sizeof(*gh)/4;
+        if ((AppMsg[2] & 1) == 1) gh->arfcn = htons(GSMTAP_ARFCN_F_UPLINK);
         if ((format == 0) || (format == 2)) gh->type = GSMTAP_TYPE_UM_BURST;
         else gh->type = GSMTAP_TYPE_UM;
         gh->sub_type = GSMTAP_CHANNEL_UNKNOWN;
@@ -214,5 +211,5 @@ int main(int argc, char **argv)
     myreq[9] = 0; myreq[10] = 25; //LayerMessage-disable request
     req(myreq, sizeof(myreq));
     printf("[*] Checksum errors: %d/%d | Total errors: %d/%d\n", s.checksumErrors, s.packets, s.totalErrors, s.packets);
-    return 0;
+    return (s.totalErrors == 0) ? 0 : 1;
 }
